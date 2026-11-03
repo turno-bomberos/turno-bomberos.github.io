@@ -52,8 +52,7 @@
   <div class="capa" id="ayuda" hidden>
     <img src="icono-192.png" alt="">
     <p><strong>La app no termina de abrir.</strong></p>
-    <p class="nota" id="ayuda-texto">La primera vez hay que entrar con tu cuenta de Google y autorizar la app en el navegador.
-      Ábrela allí, autoriza y vuelve aquí.</p>
+    <p class="nota" id="ayuda-texto">Puede que la conexión vaya lenta. Reintenta o ábrela en el navegador.</p>
     <div class="botones">
       <a class="principal" id="abrir-navegador" target="_blank" rel="noopener">Abrir en el navegador</a>
       <button class="suave" id="reintentar">Reintentar</button>
@@ -61,8 +60,17 @@
   </div>
 
   <script>
-    // Dirección de la app (despliegue /exec de Apps Script). Al cambiar de entorno, solo cambia esto.
-    const APP = 'https://script.google.com/macros/s/AKfycbzOA5JUoScTMEYChgyDH_GkJlBkiZFkj7H2Mocr_pRxAdHu1gAKbtRVTGxowPmv6Ixl/exec';
+    // Dirección de la app (despliegue /exec de Apps Script). Con #pruebas al final, la copia de pruebas.
+    const PRUEBAS = location.hash === '#pruebas';
+    const APP = PRUEBAS
+      ? 'https://script.google.com/macros/s/AKfycbzcs-5pr055bLiMfH71UBdNTzS1SGmMSdbPZlWQPcvxB_ZlFlkfm9cVHurYnfYpPnaz/exec'
+      : 'https://script.google.com/macros/s/AKfycbzOA5JUoScTMEYChgyDH_GkJlBkiZFkj7H2Mocr_pRxAdHu1gAKbtRVTGxowPmv6Ixl/exec';
+    // Sesión de la app (se entra con el correo y un código): se guarda aquí, que es lo que el móvil conserva.
+    const CLAVE_TESTIGO = PRUEBAS ? 'testigo:pruebas' : 'testigo';
+    const testigo = {
+      leer() { try { return localStorage.getItem(CLAVE_TESTIGO) || ''; } catch (e) { return ''; } },
+      guardar(t) { try { if (t) localStorage.setItem(CLAVE_TESTIGO, t); else localStorage.removeItem(CLAVE_TESTIGO); } catch (e) { /* nada */ } },
+    };
     // La app corre en un marco de Google (…googleusercontent.com): solo se atienden mensajes de ahí.
     const ORIGEN_APP = /^https:\/\/[a-z0-9-]+[.-]script\.googleusercontent\.com$/;
     const ESPERA_MS = 20000;
@@ -79,8 +87,7 @@
       cargando.hidden = false;
       marco.src = APP;
       clearTimeout(temporizador);
-      // Si la app no avisa de que ha arrancado, casi siempre es la sesión de Google o la primera autorización,
-      // que Google no deja hacer dentro de otra página.
+      // Si la app no avisa de que ha arrancado, casi siempre es la conexión.
       temporizador = setTimeout(() => {
         if (lista) return;
         cargando.hidden = true;
@@ -101,7 +108,9 @@
         cargando.hidden = true;
         ayuda.hidden = true;
         // La app pregunta si puede compartir a través de aquí (dentro del marco de Google no siempre le dejan).
-        e.source.postMessage({ turno5: 'carcasa', compartir: !!navigator.canShare }, e.origin);
+        e.source.postMessage({ turno5: 'carcasa', compartir: !!navigator.canShare, testigo: testigo.leer() }, e.origin);
+      } else if (m.turno5 === 'testigo' && typeof m.testigo === 'string') {
+        testigo.guardar(m.testigo);
       } else if (m.turno5 === 'compartir') {
         const responder = error => e.source.postMessage({ turno5: 'compartido', id: m.id, error: error || '' }, e.origin);
         try {
