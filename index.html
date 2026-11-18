@@ -120,9 +120,11 @@
         cargando.hidden = true;
         ayuda.hidden = true;
         // La app pregunta si puede compartir a través de aquí (dentro del marco de Google no siempre le dejan).
-        e.source.postMessage({ turno5: 'carcasa', compartir: !!navigator.canShare, testigo: testigo.leer() }, e.origin);
+        e.source.postMessage({ turno5: 'carcasa', compartir: !!navigator.canShare, recargar: true, testigo: testigo.leer() }, e.origin);
       } else if (m.turno5 === 'testigo' && typeof m.testigo === 'string') {
         testigo.guardar(m.testigo);
+      } else if (m.turno5 === 'recargar') {
+        cargar();
       } else if (m.turno5 === 'compartir') {
         const responder = error => e.source.postMessage({ turno5: 'compartido', id: m.id, error: error || '' }, e.origin);
         try {
