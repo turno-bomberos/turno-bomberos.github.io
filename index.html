@@ -37,6 +37,13 @@
     }
     .principal { background: var(--rojo); color: #fff; }
     .suave { background: var(--tarjeta); color: var(--rojo); }
+    .aviso {
+      position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 10;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 16px;
+      background: var(--texto); color: var(--fondo); border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.3); font-weight: 600;
+    }
+    .aviso[hidden] { display: none; }
+    .aviso button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--rojo); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
     .puntos::after { content: ''; animation: puntos 1.2s steps(4) infinite; }
     @keyframes puntos { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
   </style>
@@ -47,6 +54,11 @@
   <div class="capa" id="cargando">
     <img src="icono-192.png" alt="">
     <p class="puntos">Cargando</p>
+  </div>
+
+  <div class="aviso" id="nueva" hidden>
+    <span>Hay una versión nueva</span>
+    <button id="actualizar">Actualizar</button>
   </div>
 
   <div class="capa" id="ayuda" hidden>
@@ -127,8 +139,23 @@
 
     cargar();
 
+    // En iOS, instalada, no se puede recargar: al volver tras un rato fuera se recarga la app sola (datos al día),
+    // y si hay una versión nueva de la carcasa se avisa con un botón.
+    const AUSENTE_MS = 5 * 60 * 1000;
+    let oculta = 0, registro = null;
+    const nueva = document.getElementById('nueva');
+    document.getElementById('actualizar').onclick = () => location.reload();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { oculta = Date.now(); return; }
+      if (oculta && Date.now() - oculta > AUSENTE_MS) cargar();
+      oculta = 0;
+      if (registro) registro.update().catch(() => {});
+    });
+
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+      const habiaControlador = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (habiaControlador) nueva.hidden = false; });
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(r => { registro = r; }).catch(() => {}));
     }
   </script>
 </body>
